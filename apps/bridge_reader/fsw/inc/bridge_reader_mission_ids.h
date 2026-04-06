@@ -21,6 +21,9 @@
 #define BRIDGE_WIRE_CCSDS_APID_PING 0x007u
 #define BRIDGE_SB_MSGID_PING        0x18F1u
 
+/* CMD_TO_LAB_ENABLE_OUTPUT — CI_LAB builds TO_LAB_EnableOutputCmd (SB MsgId TO_LAB_CMD_MID), not bridge_reader */
+#define BRIDGE_WIRE_CCSDS_APID_TO_LAB_ENABLE_OUTPUT 0x008u
+
 /* Backward-compatible names (heartbeat / first bridge topic) */
 #define BRIDGE_SB_MSGID_RAW_VALUE BRIDGE_SB_MSGID_HEARTBEAT
 #define BRIDGE_WIRE_CCSDS_APID    BRIDGE_WIRE_CCSDS_APID_HEARTBEAT
