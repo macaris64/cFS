@@ -20,14 +20,16 @@
  * Kept as an array so subscription stays easy to manage.
  */
 static const uint16_t BRIDGE_READER_SubscriptionMsgValues[] = {
-    BRIDGE_SB_MSGID_RAW_VALUE,
+    BRIDGE_SB_MSGID_HEARTBEAT,
+    BRIDGE_SB_MSGID_PING,
 };
 
 static const size_t BRIDGE_READER_SubscriptionCount =
     sizeof(BRIDGE_READER_SubscriptionMsgValues) / sizeof(BRIDGE_READER_SubscriptionMsgValues[0]);
 
-static void BRIDGE_READER_ProcessBridgeWire(const uint8_t *wire, size_t wire_len);
-static void BRIDGE_READER_LogPayloadHex(const uint8_t *payload, size_t payload_len);
+static void BRIDGE_READER_ProcessBridgeWire(const uint8_t *wire, size_t wire_len, uint16_t sb_msg_value);
+static void BRIDGE_READER_LogPayloadHex(uint16_t sb_msg_value, uint16_t wire_apid, const uint8_t *payload,
+                                        size_t payload_len);
 
 /*
  * Payload length from CCSDS Packet Data Length field (matches rust-bridge).
@@ -84,11 +86,16 @@ void BRIDGE_READER_Main(void)
 
     if (status == CFE_SUCCESS)
     {
-        OS_printf("BRIDGE_READER: Initialized v%u.%u.%u, subscribed to bridge MsgId 0x%X\n",
+        OS_printf("BRIDGE_READER: Initialized v%u.%u.%u, subscribed to %zu bridge MsgId(s):",
                   BRIDGE_READER_MAJOR_VERSION, BRIDGE_READER_MINOR_VERSION, BRIDGE_READER_REVISION,
-                  (unsigned int)BRIDGE_SB_MSGID_RAW_VALUE);
-        CFE_ES_WriteToSysLog("BRIDGE_READER: Initialized, subscribed to MsgId 0x%X\n",
-                             (unsigned int)BRIDGE_SB_MSGID_RAW_VALUE);
+                  (size_t)BRIDGE_READER_SubscriptionCount);
+        for (i = 0; i < BRIDGE_READER_SubscriptionCount; i++)
+        {
+            OS_printf(" 0x%X", (unsigned int)BRIDGE_READER_SubscriptionMsgValues[i]);
+        }
+        OS_printf("\n");
+        CFE_ES_WriteToSysLog("BRIDGE_READER: Initialized, subscribed to %zu MsgId(s)\n",
+                             (unsigned long)BRIDGE_READER_SubscriptionCount);
     }
 
     while (CFE_ES_RunLoop(&RunStatus) == true)
@@ -105,6 +112,8 @@ void BRIDGE_READER_Main(void)
             size_t                   hdr_sz = sizeof(CFE_MSG_Message_t);
             const uint8_t *          wire;
             size_t                   wire_len;
+            CFE_SB_MsgId_t           MsgId = CFE_SB_INVALID_MSG_ID;
+            uint16_t                 sb_msg_value;
 
             CFE_MSG_GetSize(&SBBufPtr->Msg, &sz);
             if (sz < (CFE_MSG_Size_t)hdr_sz)
@@ -113,17 +122,21 @@ void BRIDGE_READER_Main(void)
                 continue;
             }
 
+            CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
+            sb_msg_value = (uint16_t)CFE_SB_MsgIdToValue(MsgId);
+
             wire_len = (size_t)sz - hdr_sz;
             wire     = (const uint8_t *)&SBBufPtr->Msg + hdr_sz;
 
-            BRIDGE_READER_ProcessBridgeWire(wire, wire_len);
+            BRIDGE_READER_ProcessBridgeWire(wire, wire_len, sb_msg_value);
         }
     }
 
     CFE_ES_PerfLogExit(BRIDGE_READER_MAIN_TASK_PERF_ID);
 }
 
-static void BRIDGE_READER_LogPayloadHex(const uint8_t *payload, size_t payload_len)
+static void BRIDGE_READER_LogPayloadHex(uint16_t sb_msg_value, uint16_t wire_apid, const uint8_t *payload,
+                                        size_t payload_len)
 {
     char   line[160];
     size_t pos = 0;
@@ -142,11 +155,13 @@ static void BRIDGE_READER_LogPayloadHex(const uint8_t *payload, size_t payload_l
     }
     line[sizeof(line) - 1] = '\0';
 
-    OS_printf("Bridge Reader: Received valid packet. Payload: [%s]\n", line);
-    CFE_ES_WriteToSysLog("Bridge Reader: Received valid packet. Payload: [%s]\n", line);
+    OS_printf("Bridge Reader: SB MsgId 0x%04X wire APID 0x%03X payload: [%s]\n", (unsigned int)sb_msg_value,
+              (unsigned int)wire_apid, line);
+    CFE_ES_WriteToSysLog("Bridge Reader: SB MsgId 0x%04X wire APID 0x%03X payload: [%s]\n",
+                         (unsigned int)sb_msg_value, (unsigned int)wire_apid, line);
 }
 
-static void BRIDGE_READER_ProcessBridgeWire(const uint8_t *wire, size_t wire_len)
+static void BRIDGE_READER_ProcessBridgeWire(const uint8_t *wire, size_t wire_len, uint16_t sb_msg_value)
 {
     BridgeReader_CcsdsPrimaryHeader_t pri;
     uint16_t                          apid;
@@ -175,7 +190,6 @@ static void BRIDGE_READER_ProcessBridgeWire(const uint8_t *wire, size_t wire_len
     (void)sec_hdr;
     (void)seq_flags;
     (void)seq_count;
-    (void)apid;
 
     payload_len = BridgeReader_PayloadLenFromDataLengthField(w2);
     if (6u + payload_len + 2u != wire_len)
@@ -195,5 +209,5 @@ static void BRIDGE_READER_ProcessBridgeWire(const uint8_t *wire, size_t wire_len
     }
 
     payload = wire + 6u;
-    BRIDGE_READER_LogPayloadHex(payload, payload_len);
+    BRIDGE_READER_LogPayloadHex(sb_msg_value, apid, payload, payload_len);
 }
