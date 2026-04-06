@@ -1,6 +1,6 @@
 [submodule "cfe"]
 	path = cfe
-	url = https://github.com/macaris64/cFE.git
+	url = https://github.com/GokServis/cFE.git
 	branch = main
 [submodule "osal"]
 	path = osal
@@ -12,7 +12,7 @@
   branch = main
 [submodule "apps/ci_lab"]
 	path = apps/ci_lab
-	url = https://github.com/macaris64/ci_lab.git
+	url = https://github.com/GokServis/ci_lab.git
   branch = main
 [submodule "apps/sample_app"]
 	path = apps/sample_app
