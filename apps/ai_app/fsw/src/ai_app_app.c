@@ -56,12 +56,13 @@ static void AI_APP_SendTblValidateCritical(const char *Text)
 {
     if (Text == NULL)
     {
-        CFE_EVS_SendEvent(AI_APP_EVT_TBL_VALIDATE_CRIT, CFE_EVS_CRITICAL, "AI_APP weights table validation failed");
+        CFE_EVS_SendEvent(AI_APP_EVT_TBL_VALIDATE_CRIT, CFE_EVS_EventType_CRITICAL,
+                          "AI_APP weights table validation failed");
     }
     else
     {
-        CFE_EVS_SendEvent(AI_APP_EVT_TBL_VALIDATE_CRIT, CFE_EVS_CRITICAL, "AI_APP weights table validation failed: %s",
-                          Text);
+        CFE_EVS_SendEvent(AI_APP_EVT_TBL_VALIDATE_CRIT, CFE_EVS_EventType_CRITICAL,
+                          "AI_APP weights table validation failed: %s", Text);
     }
 }
 
@@ -76,6 +77,8 @@ static int32 AI_APP_ValidateWeights(void *TblPtr)
         AI_APP_SendTblValidateCritical(reason);
         return CFE_STATUS_EXTERNAL_RESOURCE_FAIL;
     }
+    CFE_EVS_SendEvent(AI_APP_EVT_TBL_VALIDATE_INF, CFE_EVS_EventType_INFORMATION,
+                      "AI_APP weights table validation success");
     return CFE_SUCCESS;
 }
 
@@ -108,12 +111,13 @@ void AI_APP_Main(void)
     {
         AI_APP_TblMgr_Init(&g_TblMgr, NULL, NULL);
 
-        status = CFE_TBL_Register(&g_WeightsTblHandle, "AI_APP.WEIGHTS", sizeof(AI_APP_WeightsTable_t), CFE_TBL_OPT_DEFAULT,
+        /* Base name only: cFE forms the registry key as AppName.BaseName → "AI_APP.WEIGHTS". */
+        status = CFE_TBL_Register(&g_WeightsTblHandle, "WEIGHTS", sizeof(AI_APP_WeightsTable_t), CFE_TBL_OPT_DEFAULT,
                                   AI_APP_ValidateWeights);
         if (status != CFE_SUCCESS)
         {
-            CFE_EVS_SendEvent(AI_APP_EVT_TBL_REGISTER_ERR, CFE_EVS_CRITICAL,
-                              "AI_APP: CFE_TBL_Register(AI_APP.WEIGHTS) failed RC=0x%08lX", (unsigned long)status);
+            CFE_EVS_SendEvent(AI_APP_EVT_TBL_REGISTER_ERR, CFE_EVS_EventType_CRITICAL,
+                              "AI_APP: CFE_TBL_Register(WEIGHTS) failed RC=0x%08lX", (unsigned long)status);
             RunStatus = CFE_ES_RunStatus_APP_ERROR;
         }
     }
@@ -139,8 +143,8 @@ void AI_APP_Main(void)
         OS_printf("AI_APP: Initialized v%u.%u.%u, subscribed to %zu HK topic(s)\n", AI_APP_MAJOR_VERSION,
                   AI_APP_MINOR_VERSION, AI_APP_REVISION, AI_APP_Mission_GetSubscriptionSbValues(NULL));
         CFE_ES_WriteToSysLog("AI_APP: Initialized\n");
-        CFE_EVS_SendEvent(AI_APP_EVT_INIT_INF, CFE_EVS_INFORMATION, "AI_APP initialized v%u.%u.%u", AI_APP_MAJOR_VERSION,
-                          AI_APP_MINOR_VERSION, AI_APP_REVISION);
+        CFE_EVS_SendEvent(AI_APP_EVT_INIT_INF, CFE_EVS_EventType_INFORMATION, "AI_APP initialized v%u.%u.%u",
+                          AI_APP_MAJOR_VERSION, AI_APP_MINOR_VERSION, AI_APP_REVISION);
     }
 
     while (CFE_ES_RunLoop(&RunStatus) == true)
@@ -151,7 +155,8 @@ void AI_APP_Main(void)
         status = CFE_TBL_Manage(g_WeightsTblHandle);
         if (status != CFE_SUCCESS)
         {
-            CFE_EVS_SendEvent(AI_APP_EVT_TBL_MANAGE_ERR, CFE_EVS_ERROR, "AI_APP: CFE_TBL_Manage failed RC=0x%08lX",
+            CFE_EVS_SendEvent(AI_APP_EVT_TBL_MANAGE_ERR, CFE_EVS_EventType_ERROR,
+                              "AI_APP: CFE_TBL_Manage failed RC=0x%08lX",
                               (unsigned long)status);
         }
 
@@ -188,9 +193,8 @@ static void AI_APP_ProcessSbBuffer(CFE_SB_Buffer_t *SBBufPtr)
     int                          gpt_rc;
     OS_time_t                    t0;
     OS_time_t                    t1;
-    uint64_t                     us0;
-    uint64_t                     us1;
-    uint64_t                     dt_us;
+    OS_time_t                    dt;
+    int64                        dt_us;
 
     if (SBBufPtr == NULL)
     {
@@ -212,8 +216,8 @@ static void AI_APP_ProcessSbBuffer(CFE_SB_Buffer_t *SBBufPtr)
         CFE_Status_t tbl_rc = CFE_TBL_GetAddress((void **)&tbl, g_WeightsTblHandle);
         if (tbl_rc != CFE_SUCCESS && tbl_rc != CFE_TBL_INFO_UPDATED)
         {
-            CFE_EVS_SendEvent(AI_APP_EVT_TBL_GET_ERR, CFE_EVS_CRITICAL, "AI_APP: CFE_TBL_GetAddress failed RC=0x%08lX",
-                              (unsigned long)tbl_rc);
+            CFE_EVS_SendEvent(AI_APP_EVT_TBL_GET_ERR, CFE_EVS_EventType_CRITICAL,
+                              "AI_APP: CFE_TBL_GetAddress failed RC=0x%08lX", (unsigned long)tbl_rc);
             return;
         }
     }
@@ -231,7 +235,8 @@ static void AI_APP_ProcessSbBuffer(CFE_SB_Buffer_t *SBBufPtr)
 
     if (tbl == NULL)
     {
-        CFE_EVS_SendEvent(AI_APP_EVT_TBL_GET_ERR, CFE_EVS_CRITICAL, "AI_APP: weights table unavailable/corrupt");
+        CFE_EVS_SendEvent(AI_APP_EVT_TBL_GET_ERR, CFE_EVS_EventType_CRITICAL,
+                          "AI_APP: weights table unavailable/corrupt");
         return;
     }
     AI_APP_BuildWeightsView(tbl, &w);
@@ -243,24 +248,28 @@ static void AI_APP_ProcessSbBuffer(CFE_SB_Buffer_t *SBBufPtr)
     gpt_rc = AI_APP_GptForwardStep(&w, &g_GptState, token_id, pos_id, logits);
     (void)OS_GetLocalTime(&t1);
 
-    us0   = ((uint64_t)t0.seconds * 1000000ULL) + (uint64_t)t0.microsecs;
-    us1   = ((uint64_t)t1.seconds * 1000000ULL) + (uint64_t)t1.microsecs;
-    dt_us = (us1 >= us0) ? (us1 - us0) : 0u;
+    dt    = OS_TimeSubtract(t1, t0);
+    dt_us = OS_TimeGetTotalMicroseconds(dt);
+    if (dt_us < 0)
+    {
+        dt_us = 0;
+    }
 
     if (CFE_TBL_ReleaseAddress(g_WeightsTblHandle) != CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(AI_APP_EVT_TBL_RELEASE_ERR, CFE_EVS_ERROR, "AI_APP: CFE_TBL_ReleaseAddress failed");
+        CFE_EVS_SendEvent(AI_APP_EVT_TBL_RELEASE_ERR, CFE_EVS_EventType_ERROR,
+                          "AI_APP: CFE_TBL_ReleaseAddress failed");
     }
 
     if (gpt_rc != 0)
     {
-        CFE_EVS_SendEvent(AI_APP_EVT_INFER_FAIL_CRIT, CFE_EVS_CRITICAL,
+        CFE_EVS_SendEvent(AI_APP_EVT_INFER_FAIL_CRIT, CFE_EVS_EventType_CRITICAL,
                           "AI_APP: inference failed rc=%d token=%lu pos=%lu", gpt_rc, (unsigned long)token_id,
                           (unsigned long)pos_id);
         return;
     }
 
-    CFE_EVS_SendEvent(AI_APP_EVT_INFER_TIME_INF, CFE_EVS_INFORMATION,
-                      "AI_APP: inference dt_us=%llu token=%lu pos=%lu logit0=%.6g", (unsigned long long)dt_us,
+    CFE_EVS_SendEvent(AI_APP_EVT_INFER_TIME_INF, CFE_EVS_EventType_INFORMATION,
+                      "AI_APP: inference dt_us=%lld token=%lu pos=%lu logit0=%.6g", (long long)dt_us,
                       (unsigned long)token_id, (unsigned long)pos_id, logits[0]);
 }

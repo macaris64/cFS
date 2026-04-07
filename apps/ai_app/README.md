@@ -56,9 +56,9 @@ make -C unit-test check
 
 This builds and runs `unit-test/ai_app_host_ut`, which executes:
 
-- autograd goldens (from `scripts/autograd_golden.py`)
-- tensor goldens (from `scripts/tensor_golden.py`)
-- GPT forward goldens (from `scripts/gpt_forward_golden.py`)
+- autograd goldens (from `scripts/golden/autograd_golden.py`)
+- tensor goldens (from `scripts/golden/tensor_golden.py`)
+- GPT forward goldens (from `scripts/golden/gpt_forward_golden.py`)
 - subscription-list sanity checks
 
 #### Full cFS bundle integration (app build)

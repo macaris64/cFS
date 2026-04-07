@@ -27,6 +27,12 @@
 /* CMD_TO_LAB_DISABLE_OUTPUT — CI_LAB builds TO_LAB_DisableOutputCmd (SB MsgId TO_LAB_CMD_MID), not bridge_reader */
 #define BRIDGE_WIRE_CCSDS_APID_TO_LAB_DISABLE_OUTPUT 0x009u
 
+/* CMD_CFE_TBL_LOAD_FILE — CI_LAB builds CFE_TBL_LoadCmd (SB MsgId CFE_TBL_CMD_MID), not bridge_reader */
+#define BRIDGE_WIRE_CCSDS_APID_CFE_TBL_LOAD_FILE 0x00Au
+
+/* CMD_CFE_TBL_ACTIVATE — CI_LAB builds CFE_TBL_ActivateCmd (SB MsgId CFE_TBL_CMD_MID), not bridge_reader */
+#define BRIDGE_WIRE_CCSDS_APID_CFE_TBL_ACTIVATE 0x00Bu
+
 /* Backward-compatible names (heartbeat / first bridge topic) */
 #define BRIDGE_SB_MSGID_RAW_VALUE BRIDGE_SB_MSGID_HEARTBEAT
 #define BRIDGE_WIRE_CCSDS_APID    BRIDGE_WIRE_CCSDS_APID_HEARTBEAT

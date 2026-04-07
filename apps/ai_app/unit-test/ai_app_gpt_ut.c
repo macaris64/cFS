@@ -1,5 +1,5 @@
 /************************************************************************
- * ai_app GPT forward test (weights from LCG — must match scripts/gpt_forward_golden.py)
+ * ai_app GPT forward test (weights from LCG — must match scripts/golden/gpt_forward_golden.py)
  ************************************************************************/
 
 #include "ai_app_gpt.h"

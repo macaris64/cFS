@@ -4,7 +4,7 @@
 #ifndef DEFAULT_AI_APP_MISSION_CFG_H
 #define DEFAULT_AI_APP_MISSION_CFG_H
 
-/* Match scripts/microgpt.py small GPT */
+/* Match scripts/reference/microgpt.py small GPT */
 #define AI_APP_GPT_VOCAB_SIZE 17u
 #define AI_APP_GPT_N_EMBD 16u
 #define AI_APP_GPT_BLOCK_SIZE 16u

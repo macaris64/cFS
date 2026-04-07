@@ -1,5 +1,5 @@
 /************************************************************************
- * ai_app tensor unit tests (goldens from scripts/tensor_golden.py)
+ * ai_app tensor unit tests (goldens from scripts/golden/tensor_golden.py)
  ************************************************************************/
 
 #include "ai_app_tensor.h"

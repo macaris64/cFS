@@ -1,5 +1,5 @@
 /************************************************************************
- * ai_app autograd unit tests (goldens from scripts/autograd_golden.py)
+ * ai_app autograd unit tests (goldens from scripts/golden/autograd_golden.py)
  ************************************************************************/
 
 #include "ai_app_autograd.h"
